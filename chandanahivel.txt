@@ -1,69 +1,75 @@
-const fs = require("fs");
+const fileSystem = require("fs");
 
-const data = JSON.parse(fs.readFileSync("input.json", "utf8"));
+const inputData = JSON.parse(fileSystem.readFileSync("input.json", "utf8"));
 
-const n = data.keys.n;
-const k = data.keys.k;
+const totalN = inputData.keys.n;
+const totalK = inputData.keys.k;
 
-let xs = [];
-let ys = [];
+let xValues = [];
+let yValues = [];
 
-let count = 0;
-for (let key of Object.keys(data)) {
-    if (key === "keys") continue;
-    count++;
-    if (count > k) break;
+let indexCounter = 0;
+for (let itemKey of Object.keys(inputData)) {
+    if (itemKey === "keys") continue;
+    indexCounter++;
+    if (indexCounter > totalK) break;
 
-    let base = parseInt(data[key].base);
-    let value = data[key].value;
+    let numberBase = parseInt(inputData[itemKey].base);
+    let encodedVal = inputData[itemKey].value;
 
-    let decodedY = parseInt(value, base);
+    let decodedValue = parseInt(encodedVal, numberBase);
 
-    xs.push(parseInt(key));
-    ys.push(decodedY);
+    xValues.push(parseInt(itemKey));
+    yValues.push(decodedValue);
 }
 
-function buildMatrix(xs, k) {
-    let M = [];
-    for (let i = 0; i < k; i++) {
-        let row = [];
-        for (let p = 0; p < k; p++) {
-            row.push(Math.pow(xs[i], p));
+function constructMatrix(xValues, sizeK) {
+    let matrix = [];
+    for (let r = 0; r < sizeK; r++) {
+        let matrixRow = [];
+        for (let c = 0; c < sizeK; c++) {
+            matrixRow.push(Math.pow(xValues[r], c));
         }
-        M.push(row);
+        matrix.push(matrixRow);
     }
-    return M;
+    return matrix;
 }
 
-function gaussianSolve(A, b) {
-    let n = A.length;
+function solveUsingGaussian(matrixA, vectorB) {
+    let len = matrixA.length;
 
-    for (let i = 0; i < n; i++) {
-        let maxRow = i;
-        for (let j = i + 1; j < n; j++) {
-            if (Math.abs(A[j][i]) > Math.abs(A[maxRow][i])) maxRow = j;
+    for (let i = 0; i < len; i++) {
+        let pivotRow = i;
+        for (let j = i + 1; j < len; j++) {
+            if (Math.abs(matrixA[j][i]) > Math.abs(matrixA[pivotRow][i])) pivotRow = j;
         }
 
-        [A[i], A[maxRow]] = [A[maxRow], A[i]];
-        [b[i], b[maxRow]] = [b[maxRow], b[i]];
+        [matrixA[i], matrixA[pivotRow]] = [matrixA[pivotRow], matrixA[i]];
+        [vectorB[i], vectorB[pivotRow]] = [vectorB[pivotRow], vectorB[i]];
 
-        for (let j = i + 1; j < n; j++) {
-            let factor = A[j][i] / A[i][i];
-            for (let k2 = i; k2 < n; k2++) A[j][k2] -= factor * A[i][k2];
-            b[j] -= factor * b[i];
+        for (let j = i + 1; j < len; j++) {
+            let multiplier = matrixA[j][i] / matrixA[i][i];
+            for (let k2 = i; k2 < len; k2++) {
+                matrixA[j][k2] -= multiplier * matrixA[i][k2];
+            }
+            vectorB[j] -= multiplier * vectorB[i];
         }
     }
 
-    let x = Array(n).fill(0);
-    for (let i = n - 1; i >= 0; i--) {
-        let sum = b[i];
-        for (let j = i + 1; j < n; j++) sum -= A[i][j] * x[j];
-        x[i] = sum / A[i][i];
+    let solutionVector = Array(len).fill(0);
+    for (let i = len - 1; i >= 0; i--) {
+        let tempSum = vectorB[i];
+        for (let j = i + 1; j < len; j++) {
+            tempSum -= matrixA[i][j] * solutionVector[j];
+        }
+        solutionVector[i] = tempSum / matrixA[i][i];
     }
-    return x;
+
+    return solutionVector;
 }
 
-let M = buildMatrix(xs, k);
-let coefficients = gaussianSolve(M, ys);
+let finalMatrix = constructMatrix(xValues, totalK);
+let polyCoefficients = solveUsingGaussian(finalMatrix, yValues);
 
-console.log("Constant term C =", coefficients[0]);
+console.log("Constant term C =", polyCoefficients[0]);
+
